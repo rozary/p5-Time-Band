@@ -1,13 +1,6 @@
 package Time::Band;
 
-BEGIN {
-  use Test::MockTime qw/set_absolute_time/;
-  set_absolute_time('2012-01-08T00:00:00Z');
-}
-
 use Mouse;
-use Data::Dumper;
-use CGI::Carp;
 use Time::Piece;
 
 has "start" => (is=>"rw",isa=>"Time::Piece");
@@ -35,14 +28,14 @@ sub result {
   my $buf = [];
 
   my $e_count = 0;
-  while (my $except = shift @{$self->{except}}) {
+  foreach my $except (@{$self->{except}}) {
     push @$buf,["e",$e_count,$except->[0]];
     push @$buf,["e",$e_count,$except->[1]];
     $e_count++;
   }
 
   my $b_count = 0;
-  while (my $band = shift @{$self->band}) {
+  foreach my $band (@{$self->band}) {
     push @$buf,["b",$b_count,$band->[0]];
     push @$buf,["b",$b_count,$band->[1]];
     $b_count++;
@@ -101,35 +94,18 @@ sub result {
     }
   }
 #  print "\n=====\n";
+  my $count = 0;
+  my $result;
+  while (my $rt = shift @$band_data) {
+    if ($count % 2 == 0) {
+      push @$result,[$rt];
+    } else {
+      push @{$result->[-1]},$rt;
+    }
+    $count++;
+  }
 
-  return $band_data;
-#  return $self->band;
+  return $result;
 }
-
-
-package main;
-
-use 5.12.3;
-use Time::Piece;
-use Data::Dumper;
-
-my $t1 = localtime();
-my $t2 = localtime() + 1200;
-
-my $band = Time::Band->new(start=>$t1,end=>$t2);
-
-my $t3 = localtime() + 9;
-my $t4 = localtime() + 180;
-
-$band->add_except($t3,$t4);
-
-my $t5 = localtime() + 60;
-my $t6 = localtime() + 1200;
-$band->add_except($t5,$t6);
-
-foreach my $r (@{$band->result}) {
-  say $r->datetime;
-}
-
 
 1;
