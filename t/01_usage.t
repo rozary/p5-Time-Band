@@ -9,7 +9,7 @@ use strict;
 use warnings;
 use Data::Dumper;
 
-use lib "../../lib/";
+use lib "lib/";
 use Test::More tests => 50;
 use Time::Piece;
 use Time::Band;
@@ -77,6 +77,19 @@ $result = [@{$band3->result}];
 $r = shift @$result;
 is $r->[0]->datetime, "2012-01-08T09:00:00", "start";
 is $r->[1]->datetime, "2012-01-08T09:01:00", "end";
+is scalar @$result , 0, "no band ok";
+
+
+my $band4 = Time::Band->new(start=>$t1,end=>$t2);
+$band4->add_except(localtime() + 60,localtime() + 120);
+$band4->add_except(localtime() + 120,localtime() + 360);
+my $result = [@{$band4->result}];
+my $r = shift @$result;
+is $r->[0]->datetime, "2012-01-08T09:00:00", "start";
+is $r->[1]->datetime, "2012-01-08T09:01:00", "end";
+$r = shift @$result;
+is $r->[0]->datetime, "2012-01-08T09:06:00", "start";
+is $r->[1]->datetime, "2012-01-08T09:20:00", "end";
 is scalar @$result , 0, "no band ok";
 
 

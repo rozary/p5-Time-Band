@@ -45,6 +45,7 @@ sub result {
   my $band_data = [];
   foreach my $data (sort {$a->[2] <=> $b->[2] || $a->[0] cmp $b->[0]} @$buf) {
     if (0) {
+use Data::Dumper;
       print $data->[2]->datetime;
       print Dumper $flg;
       print "\n";
@@ -100,6 +101,9 @@ sub result {
     if ($count % 2 == 0) {
       push @$result,[$rt];
     } else {
+      if ($result->[-1]->[0] == $rt) {
+        pop @$result;
+      }
       push @{$result->[-1]},$rt;
     }
     $count++;
