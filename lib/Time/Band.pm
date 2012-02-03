@@ -98,13 +98,20 @@ use Data::Dumper;
   my $count = 0;
   my $result;
   while (my $rt = shift @$band_data) {
+#    print Dumper $result;
     if ($count % 2 == 0) {
+      #start_time
       push @$result,[$rt];
     } else {
       if ($result->[-1]->[0] == $rt) {
+        #when start time equal end time
         pop @$result;
       }
-      push @{$result->[-1]},$rt;
+      if (scalar @$result == 0) {
+        push @{$result->[0]},$rt;
+      } else {
+        push @{$result->[-1]},$rt;
+      }
     }
     $count++;
   }
