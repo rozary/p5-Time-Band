@@ -1,5 +1,6 @@
 package Time::Band;
 
+use 5.12.3;
 use Mouse;
 use Time::Piece;
 
@@ -18,6 +19,13 @@ sub add_except {
   my $self = shift;
   my $start = shift;
   my $end = shift;
+
+  unless ( ref $start eq "Time::Piece") {
+    die "first args is not Time::Piece object at add_except";
+  }
+  unless ( ref $end eq "Time::Piece") {
+    die "second args is not Time::Piece object at add_except";
+  }
 
   push @{$self->{except}}, [$start,$end];
 }
@@ -45,7 +53,8 @@ sub result {
   my $band_data = [];
   foreach my $data (sort {$a->[2] <=> $b->[2] || $a->[0] cmp $b->[0]} @$buf) {
     if (0) {
-use Data::Dumper;
+      use Data::Dumper;
+#      print Dumper $data;
       print $data->[2]->datetime;
       print Dumper $flg;
       print "\n";
@@ -71,8 +80,8 @@ use Data::Dumper;
       }
 
     } else {
-
 #      print $data->[2]->datetime;
+      my $last = $#$band_data;
       $flg->{$data->[0]}->{$data->[1]}++;
       my $b_num = scalar keys %{$flg->{b}};
       my $e_num = scalar keys %{$flg->{e}};
@@ -85,7 +94,11 @@ use Data::Dumper;
       if ( $data->[0] eq "e" ) {
         if ($b_num > 0 && $e_num == 1) {
           #ok期間内で、ngフラグが立ったら入れる。
-          push @$band_data,$data->[2];
+          if ( $band_data->[$last] == $data->[2] ) {
+            pop @$band_data;
+          } else {
+            push @$band_data,$data->[2];
+          }
         }
         if ($b_num > 0 && $e_num == 0) {
           #ok期間内で、ngフラグが終わったら入れる。
@@ -98,19 +111,16 @@ use Data::Dumper;
   my $count = 0;
   my $result;
   while (my $rt = shift @$band_data) {
-#    print Dumper $result;
+    my $last = $#$result;
     if ($count % 2 == 0) {
       #start_time
       push @$result,[$rt];
     } else {
-      if ($result->[-1]->[0] == $rt) {
+      if ($result->[$last]->[0] == $rt) {
         #when start time equal end time
         pop @$result;
-      }
-      if (scalar @$result == 0) {
-        push @{$result->[0]},$rt;
       } else {
-        push @{$result->[-1]},$rt;
+        push @{$result->[$last]},$rt;
       }
     }
     $count++;

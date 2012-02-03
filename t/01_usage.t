@@ -1,8 +1,8 @@
 #!/usr/bin/perl
 
 BEGIN {
-  use Test::MockTime qw/set_absolute_time/;
-  set_absolute_time('2012-01-08T00:00:00Z');
+  use Test::MockTime qw/set_fixed_time/;
+  set_fixed_time('2012-01-08T00:00:00Z');
 }
 
 use strict;
@@ -10,7 +10,7 @@ use warnings;
 use Data::Dumper;
 
 use lib "lib/";
-use Test::More tests => 50;
+use Test::More tests => 35;
 use Time::Piece;
 use Time::Band;
 
@@ -83,14 +83,32 @@ is scalar @$result , 0, "no band ok";
 my $band4 = Time::Band->new(start=>$t1,end=>$t2);
 $band4->add_except(localtime() + 60,localtime() + 120);
 $band4->add_except(localtime() + 120,localtime() + 360);
-my $result = [@{$band4->result}];
-my $r = shift @$result;
+$result = [@{$band4->result}];
+$r = shift @$result;
 is $r->[0]->datetime, "2012-01-08T09:00:00", "start";
 is $r->[1]->datetime, "2012-01-08T09:01:00", "end";
 $r = shift @$result;
 is $r->[0]->datetime, "2012-01-08T09:06:00", "start";
 is $r->[1]->datetime, "2012-01-08T09:20:00", "end";
 is scalar @$result , 0, "no band ok";
+
+my $band5 = Time::Band->new(start=>$t1,end=>$t2);
+$band5->add_except(localtime()+0,localtime()+120);
+$band5->add_except(localtime()+120,localtime() + 360);
+
+$result = $band5->result;
+$r = shift @$result;
+is $r->[0]->datetime, "2012-01-08T09:06:00", "start";
+is $r->[1]->datetime, "2012-01-08T09:20:00", "end";
+
+my $band6 = Time::Band->new(start=>$t1,end=>$t2);
+$band6->add_except(localtime()+120,localtime()+360);
+$band6->add_except(localtime()+360,localtime() + 1200);
+
+$result = $band6->result;
+$r = shift @$result;
+is $r->[0]->datetime, "2012-01-08T09:00:00", "start";
+is $r->[1]->datetime, "2012-01-08T09:02:00", "end";
 
 
 1;
