@@ -1,6 +1,5 @@
 package Time::Band;
 
-use 5.12.3;
 use Mouse;
 use Time::Piece;
 
