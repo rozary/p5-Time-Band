@@ -5,8 +5,10 @@ use Time::Piece;
 
 has "start" => (is=>"rw",isa=>"Time::Piece");
 has "end" => (is=>"rw",isa=>"Time::Piece");
-has "band" => (is=>"rw",isa=>"ArrayRef");
-has "except" => (is=>"rw",isa=>"ArrayRef");
+has "band" => (is=>"rw",isa=>"ArrayRef",default=>sub {[]});
+has "_except_time" => (is=>"rw",isa=>"ArrayRef",default=>sub {[]});
+
+__PACKAGE__->meta->make_immutable();
 
 sub BUILD {
   my $self = shift;
@@ -14,19 +16,19 @@ sub BUILD {
   $self->{band} = [[$self->start,$self->end]];
 }
 
-sub add_except {
+sub except {
   my $self = shift;
   my $start = shift;
   my $end = shift;
 
   unless ( ref $start eq "Time::Piece") {
-    die "first args is not Time::Piece object at add_except";
+    die "first args is not Time::Piece object at except";
   }
   unless ( ref $end eq "Time::Piece") {
-    die "second args is not Time::Piece object at add_except";
+    die "second args is not Time::Piece object at except";
   }
 
-  push @{$self->{except}}, [$start,$end];
+  push @{$self->_except_time}, [$start,$end];
 }
 
 sub result {
@@ -35,7 +37,7 @@ sub result {
   my $buf = [];
 
   my $e_count = 0;
-  foreach my $except (@{$self->{except}}) {
+  foreach my $except (@{$self->_except_time}) {
     push @$buf,["e",$e_count,$except->[0]];
     push @$buf,["e",$e_count,$except->[1]];
     $e_count++;
@@ -85,14 +87,14 @@ sub result {
       my $b_num = scalar keys %{$flg->{b}};
       my $e_num = scalar keys %{$flg->{e}};
 
-      #ngŠúŠÔ‚Å‚È‚¢Žž‚Ìok‚Í“ü‚ê‚éB
+      #ngæœŸé–“ã§ãªã„æ™‚ã®okã¯å…¥ã‚Œã‚‹ã€‚
       if ( $data->[0] eq "b" && $e_num == 0) {
         push @$band_data,$data->[2];
       }
 
       if ( $data->[0] eq "e" ) {
         if ($b_num > 0 && $e_num == 1) {
-          #okŠúŠÔ“à‚ÅAngƒtƒ‰ƒO‚ª—§‚Á‚½‚ç“ü‚ê‚éB
+          #okæœŸé–“å†…ã§ã€ngãƒ•ãƒ©ã‚°ãŒç«‹ã£ãŸã‚‰å…¥ã‚Œã‚‹ã€‚
           if ( $band_data->[$last] == $data->[2] ) {
             pop @$band_data;
           } else {
@@ -100,7 +102,7 @@ sub result {
           }
         }
         if ($b_num > 0 && $e_num == 0) {
-          #okŠúŠÔ“à‚ÅAngƒtƒ‰ƒO‚ªI‚í‚Á‚½‚ç“ü‚ê‚éB
+          #okæœŸé–“å†…ã§ã€ngãƒ•ãƒ©ã‚°ãŒçµ‚ã‚ã£ãŸã‚‰å…¥ã‚Œã‚‹ã€‚
           push @$band_data,$data->[2];
         }
       }
