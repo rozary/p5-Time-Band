@@ -185,12 +185,10 @@ sub _to_no_relation {
     my $flg_comment = {1=>"加",2=>"減"};
     say "flgAは".$flg_comment->{$add_except_flgA} .
         " / flgBは". $flg_comment->{$add_except_flgB};
-    say "";
     say $rel->[0]->[0]->datetime. " - " .$rel->[0]->[1]->datetime;
     say " と ";
     say $rel->[1]->[0]->datetime. " - " .$rel->[1]->[1]->datetime;
     say " は時間が交わっています";
-    say "";
     
 #        say $times->[0],$times->[1],$times->[2],$times->[3];
 
@@ -346,7 +344,7 @@ sub _to_no_relation2 {
     my $base_id = shift @$r;
     my $base_time = [$self->_by_time_id($base_id)];
 
-    say 3333;
+#    say 3333;
     $base_time = $self->_divide($base_time,$r);
 #    say $base_time;
     push $result ,@$base_time;
@@ -359,23 +357,23 @@ sub _divide {
   my $base_time = shift;
   my $r = shift;
 
-  say 11111;
+#  say 11111;
   my $result;
   my $id = shift @$r;
 #  say @$base_time;
   unless ($id) {
-    say scalar @$base_time;
+#    say scalar @$base_time;
     return $base_time;
   }
 
   my $tmp = [];
   foreach my $bt (@$base_time) {
-    say @$bt;
-    say "idは".$id;
+#    say @$bt;
+#    say "idは".$id;
     my $time = $self->_by_time_id($id);
     my $rtn = $self->_time_overlap_status($bt,$time);
     my $status = $rtn->[0];
-    say $status;
+#    say $status;
     my $times = $rtn->[1];
 
     my $add_except_flgA = $bt->[2];
@@ -426,6 +424,8 @@ sub _divide {
         } elsif ($status == 1) {
           say "status 1 1 & 2";
           #ここおけ
+          $times->[1] -= 1;
+          $times->[2] += 1;
           @time = ([$times->[0],$times->[1],1],[$times->[2],$times->[3],1]);
 
           #時間が被った
@@ -436,8 +436,9 @@ sub _divide {
           #時間が被った
           #|A |B |A |B
         } elsif ($status == 3) {
-          say "status 3";
-          @time = [$times->[0],$times->[2],1];
+          say "status 3 1 & 2";
+          $times->[1] -= 1;
+          @time = [$times->[0],$times->[1],1];
           #時間が被った
           #|B |A |B |A
         } elsif ($status == 4) {
@@ -476,12 +477,12 @@ sub _divide {
 
       say $time->[0];
       say "結果は" .$time[0]->[0] ." - ". $time[0]->[1];
-      say "結果は" .$time[1]->[0] ." - ". $time[1]->[1];
+      if ($time[1]) {
+        say "結果は" .$time[1]->[0] ." - ". $time[1]->[1];
+      }
 #      say @time;
       push @$tmp,@time;
     } else {
-      say 888888;
-      say $bt;
       push @$tmp, $bt;
       #ここで関連性がないものはいらない。
     }
@@ -495,7 +496,7 @@ sub _divide {
     return $result;
   } else {
     say "recursive".scalar @$result . ":" .scalar @$base_time;
-    say $result->[0];
+#    say $result->[0];
     return $self->_divide($result,$r);
   }
 #  return $base_time;
