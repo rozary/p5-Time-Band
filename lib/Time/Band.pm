@@ -339,7 +339,6 @@ sub _to_no_relation2 {
   my $relation_group = $self->_relation_group($times);
 #  say Dumper $relation_group;
   my $temp = {};
-
   
   foreach my $r (@$relation_group) {
 
@@ -350,7 +349,7 @@ sub _to_no_relation2 {
     say 3333;
     $base_time = $self->_divide($base_time,$r);
 #    say $base_time;
-    push $result ,$base_time;
+    push $result ,@$base_time;
   }
   return $result;
 }
@@ -362,131 +361,142 @@ sub _divide {
 
   say 11111;
   my $result;
-  foreach my $id (@$r) {
-    foreach my $bt (@$base_time) {
-#      say $r;
-      my $time = $self->_by_time_id($id);
-#      say $time->[0],$time->[1];
-      my $rtn = $self->_time_overlap_status($bt,$time);
-      my $status = $rtn->[0];
-      say $status;
-      my $times = $rtn->[1];
+  my $id = shift @$r;
+#  say @$base_time;
+  unless ($id) {
+    say scalar @$base_time;
+    return $base_time;
+  }
 
-      my $add_except_flgA = $bt->[2];
-      my $add_except_flgB = $time->[2];
+  my $tmp = [];
+  foreach my $bt (@$base_time) {
+    say @$bt;
+    say "idは".$id;
+    my $time = $self->_by_time_id($id);
+    my $rtn = $self->_time_overlap_status($bt,$time);
+    my $status = $rtn->[0];
+    say $status;
+    my $times = $rtn->[1];
+
+    my $add_except_flgA = $bt->[2];
+    my $add_except_flgB = $time->[2];
+
+    if ($status != 0) {
 
       my $flg_comment = {1=>"加",2=>"減"};
       say "flgAは".$flg_comment->{$add_except_flgA} .
       " / flgBは". $flg_comment->{$add_except_flgB};
-      say "";
       say $bt->[0]->datetime. " - " .$bt->[1]->datetime;
-      say " と ";
       say $time->[0]->datetime. " - " .$time->[1]->datetime;
       say " は時間が交わっています";
-      say "";
 
-      if ($status != 0) {
-
-        my @time;
-        if ($add_except_flgA == 1 && $add_except_flgB == 1) {
-          if ($status == 0) {
+      my @time;
+      if ($add_except_flgA == 1 && $add_except_flgB == 1) {
+        if ($status == 0) {
 #          print Dumper $times;
-            @time = ([$times->[0],$times->[1],1],[$times->[2],$times->[3],1]);
+          @time = ([$times->[0],$times->[1],1],[$times->[2],$times->[3],1]);
 
-            #時間が被った
-            #|A |B B| A|
-          } elsif ($status == 1) {
-            say "satus 1";
-            @time = [$times->[0],$times->[3],1];
+          #時間が被った
+          #|A |B B| A|
+        } elsif ($status == 1) {
+          say "satus 1";
+          @time = [$times->[0],$times->[3],1];
 
-            #時間が被った
-            #|B |A A| B|
-          } elsif ($status == 2) {
-            @time = [$times->[0],$times->[3],1];
-            #時間が被った
-            #|A |B |A |B
-          } elsif ($status == 3) {
-            say "satus 3";
-            @time = [$times->[0],$times->[3],1];
-            #時間が被った
-            #|B |A |B |A
-          } elsif ($status == 4) {
-            @time = [$times->[0],$times->[3],1];
-          }
-        } elsif ($add_except_flgA == 1 && $add_except_flgB == 2) {
-          if ($status == 0) {
-#          print Dumper $times;
-            @time = ([$times->[0],$times->[1],1],[$times->[2],$times->[3],1]);
-
-            #時間が被った
-            #|A |B B| A|
-          } elsif ($status == 1) {
-            say "status 1 1 & 2";
-            #ここおけ
-            @time = ([$times->[0],$times->[1],1],[$times->[2],$times->[3],1]);
-
-            #時間が被った
-            #|B |A A| B|
-          } elsif ($status == 2) {
-            say "status 2";
-            @time = [$times->[1],$times->[2],1];
-            #時間が被った
-            #|A |B |A |B
-          } elsif ($status == 3) {
-            say "status 3";
-            @time = [$times->[0],$times->[2],1];
-            #時間が被った
-            #|B |A |B |A
-          } elsif ($status == 4) {
-            say "status 4 koko";
-            @time = [$times->[1],$times->[3],1];
-            say $times->[1],$times->[3];
-          }
-        } elsif ($add_except_flgA == 2 && $add_except_flgB == 1) {
-          if ($status == 0) {
-            #被りなし
-            @time = ([$times->[0],$times->[1],1],[$times->[2],$times->[3],1]);
-
-            #時間が被った
-            #|A |B B| A|
-          } elsif ($status == 1) {
-            @time = [];
-
-            #時間が被った
-            #|B |A A| B|
-          } elsif ($status == 2) {
-            $times->[1] -= 1;
-            $times->[2] += 1;
-            @time = ([$times->[0],$times->[1],1],[$times->[2],$times->[3],1]);
-            #時間が被った
-            #|A |B |A |B
-          } elsif ($status == 3) {
-            $times->[2] += 1;
-            @time = [$times->[2],$times->[3],1];
-            #時間が被った
-            #|B |A |B |A
-          } elsif ($status == 4) {
-            $times->[1] -= 1;
-            @time = [$times->[0],$times->[1],1];
-          }
+          #時間が被った
+          #|B |A A| B|
+        } elsif ($status == 2) {
+          @time = [$times->[0],$times->[3],1];
+          #時間が被った
+          #|A |B |A |B
+        } elsif ($status == 3) {
+          say "satus 3";
+          @time = [$times->[0],$times->[3],1];
+          #時間が被った
+          #|B |A |B |A
+        } elsif ($status == 4) {
+          @time = [$times->[0],$times->[3],1];
         }
+      } elsif ($add_except_flgA == 1 && $add_except_flgB == 2) {
+        if ($status == 0) {
+#          print Dumper $times;
+          @time = ([$times->[0],$times->[1],1],[$times->[2],$times->[3],1]);
 
-        say $time->[0];
-        say "結果は" .$time[0]->[0] ." - ". $time[0]->[1];
-        say "結果は" .$time[1]->[0] ." - ". $time[1]->[1];
-        $result = $time;
-      } else {
-        #ここで関連性がないものはいらない。
+          #時間が被った
+          #|A |B B| A|
+        } elsif ($status == 1) {
+          say "status 1 1 & 2";
+          #ここおけ
+          @time = ([$times->[0],$times->[1],1],[$times->[2],$times->[3],1]);
+
+          #時間が被った
+          #|B |A A| B|
+        } elsif ($status == 2) {
+          say "status 2";
+          @time = [$times->[1],$times->[2],1];
+          #時間が被った
+          #|A |B |A |B
+        } elsif ($status == 3) {
+          say "status 3";
+          @time = [$times->[0],$times->[2],1];
+          #時間が被った
+          #|B |A |B |A
+        } elsif ($status == 4) {
+          say "status 4 koko";
+          @time = [$times->[1],$times->[3],1];
+          say $times->[1],$times->[3];
+        }
+      } elsif ($add_except_flgA == 2 && $add_except_flgB == 1) {
+        if ($status == 0) {
+          #被りなし
+          @time = ([$times->[0],$times->[1],1],[$times->[2],$times->[3],1]);
+
+          #時間が被った
+          #|A |B B| A|
+        } elsif ($status == 1) {
+          @time = [];
+
+          #時間が被った
+          #|B |A A| B|
+        } elsif ($status == 2) {
+          $times->[1] -= 1;
+          $times->[2] += 1;
+          @time = ([$times->[0],$times->[1],1],[$times->[2],$times->[3],1]);
+          #時間が被った
+          #|A |B |A |B
+        } elsif ($status == 3) {
+          $times->[2] += 1;
+          @time = [$times->[2],$times->[3],1];
+          #時間が被った
+          #|B |A |B |A
+        } elsif ($status == 4) {
+          $times->[1] -= 1;
+          @time = [$times->[0],$times->[1],1];
+        }
       }
+
+      say $time->[0];
+      say "結果は" .$time[0]->[0] ." - ". $time[0]->[1];
+      say "結果は" .$time[1]->[0] ." - ". $time[1]->[1];
+#      say @time;
+      push @$tmp,@time;
+    } else {
+      say 888888;
+      say $bt;
+      push @$tmp, $bt;
+      #ここで関連性がないものはいらない。
     }
   }
+#  say 99999;
+#  say $tmp;
 
+  $result = $tmp;
   if (scalar @$result == scalar @$base_time) {
 ###    "say scalar @$times . ":" .scalar @$result;"
     return $result;
   } else {
     say "recursive".scalar @$result . ":" .scalar @$base_time;
-    $self->_divide($result);
+    say $result->[0];
+    return $self->_divide($result,$r);
   }
 #  return $base_time;
 }
@@ -558,6 +568,8 @@ sub _time_overlap_status {
   #ソートしてAABBの順番を判定する処理って早いかな?
 
   #|A |A |B |B
+#  say 33333333333;
+#  say $timeA->[0],$timeA->[1];
   if ($timeA->[0] <= $timeA->[1] && $timeA->[1] <= $timeB->[0]
     && $timeB->[0] <= $timeB->[1] ) {
 
