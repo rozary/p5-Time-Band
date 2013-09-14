@@ -13,10 +13,8 @@ use Time::Piece::MySQL;
 #3:優先度
 #4:id
 
-#$|=1;
-
-has "start" => (is=>"rw",isa=>"Time::Piece",required=>1);
-has "end" => (is=>"rw",isa=>"Time::Piece",required=>1);
+has "start" => (is=>"rw",isa=>"Time::Piece");
+has "end" => (is=>"rw",isa=>"Time::Piece");
 has "band" => (is=>"rw",isa=>"ArrayRef",default=>sub {[]},lazy=>1);
 has "_base" => (is=>"rw",isa=>"ArrayRef",default=>sub {[]},lazy=>1);
 has "_band_times" => (is=>"rw",isa=>"ArrayRef",default=>sub {[]},lazy=>1);
@@ -31,7 +29,9 @@ sub BUILD {
   my $self = shift;
 
   #基本 一つ
-  $self->_base([$self->start,$self->end,1,$self->_priority++,$self->_time_id++]);
+  if ($self->start && $self->end) {
+    $self->_base([$self->start,$self->end,1,$self->_priority++,$self->_time_id++]);
+  }
 }
 
 sub add {
@@ -491,7 +491,7 @@ sub _divide {
 #  say $tmp;
 
   $result = $tmp;
-  if (scalar @$result == scalar @$base_time) {
+  if (scalar @$result == scalar @$base_time && scalar @$r == 0) {
 ###    "say scalar @$times . ":" .scalar @$result;"
     return $result;
   } else {
@@ -499,7 +499,6 @@ sub _divide {
 #    say $result->[0];
     return $self->_divide($result,$r);
   }
-#  return $base_time;
 }
 
 sub _by_time_id {
@@ -514,15 +513,13 @@ sub _by_time_id {
 
 my $s_t1 = localtime->from_mysql_datetime("2013-07-01 10:00:00");
 my $e_t1 = localtime->from_mysql_datetime("2013-07-01 23:00:00");
-
-my $s_t2 = localtime->from_mysql_datetime("2013-07-01 12:00:00");
-my $e_t2 = localtime->from_mysql_datetime("2013-07-01 13:59:59");
-
-my $s_t3 = localtime->from_mysql_datetime("2013-07-01 16:00:00");
-my $e_t3 = localtime->from_mysql_datetime("2013-07-01 17:59:59");
-
-my $tb = __PACKAGE__->new(start=>$s_t1,end=>$e_t1);
-$tb->except($s_t2,$e_t2);
+my $s_t2 = localtime->from_mysql_datetime("2013-07-01 19:00:00");
+my $e_t2 = localtime->from_mysql_datetime("2013-07-01 20:59:59");
+my $s_t3 = localtime->from_mysql_datetime("2013-07-01 13:00:00");
+my $e_t3 = localtime->from_mysql_datetime("2013-07-01 14:59:59");
+=pod
+my $tb = Time::Band->new(start=>$s_t1,end=>$e_t1);
+$tb->add($s_t2,$e_t2);
 $tb->except($s_t3,$e_t3);
 my $res = $tb->result;
 print "結果の要素数は、".scalar @$res."です\n";
@@ -531,6 +528,7 @@ print "結果は、\n";
 foreach my $r (@$res) {
   say $r->[0] ." > " .$r->[1];
 }
+=cut
 
 print "
 
