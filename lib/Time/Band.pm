@@ -94,7 +94,16 @@ sub result {
     push @$band_times,$self->_base;
   }
 
-  return $self->_to_no_relation($band_times);
+  my $rtn = $self->_to_no_relation($band_times);
+  #余分な情報消す
+  foreach (@$rtn) {
+    delete $_->[2];
+    delete $_->[3];
+    delete $_->[4];
+  }
+
+  $rtn = $self->_sort_time($rtn); 
+  return $rtn;
 }
 
 sub _to_no_relation {
@@ -113,8 +122,8 @@ sub _to_no_relation {
     }
   }
 
-  my $relation_group = $self->_relation_group($times);
-  say Dumper $relation_group;
+  my ($relation_group,$no_relation) = $self->_relation_group($times);
+#  say Dumper $relation_group;
   my $temp = {};
   
   foreach my $r (@$relation_group) {
@@ -124,7 +133,6 @@ sub _to_no_relation {
     my $base_time = [$self->_by_time_id($base_id)];
 
     $base_time = $self->_divide($base_time,$r);
-#    say $base_time;
     push $result ,@$base_time;
   }
 
@@ -159,12 +167,14 @@ sub _divide {
 
     if ($status != 0) {
 
+=pod
       my $flg_comment = {1=>"加",2=>"減"};
       say "flgAは".$flg_comment->{$add_except_flgA} .
       " / flgBは". $flg_comment->{$add_except_flgB};
       say $bt->[0]->datetime. " - " .$bt->[1]->datetime;
       say $time->[0]->datetime. " - " .$time->[1]->datetime;
       say " は時間が交わっています";
+=cut
 
       my @time;
       if ($add_except_flgA == 1 && $add_except_flgB == 1) {
@@ -185,7 +195,7 @@ sub _divide {
           #時間が被った
           #|A |B |A |B
         } elsif ($status == 3) {
-          say "satus 3";
+#          say "status 3";
           @time = [$times->[0],$times->[3],1];
           #時間が被った
           #|B |A |B |A
@@ -214,15 +224,15 @@ sub _divide {
           #時間が被った
           #|A |B |A |B
         } elsif ($status == 3) {
-          say "status 3 1 & 2";
+#          say "status 3 1 & 2";
           $times->[1] -= 1;
           @time = [$times->[0],$times->[1],1];
           #時間が被った
           #|B |A |B |A
         } elsif ($status == 4) {
-          say "status 4 koko";
+#          say "status 4 koko";
           @time = [$times->[1],$times->[3],1];
-          say $times->[1],$times->[3];
+#          say $times->[1],$times->[3];
         }
       } elsif ($add_except_flgA == 2 && $add_except_flgB == 1) {
         if ($status == 0) {
@@ -253,10 +263,10 @@ sub _divide {
         }
       }
 
-      say $time->[0];
-      say "結果は" .$time[0]->[0] ." - ". $time[0]->[1];
+#      say $time->[0];
+#      say "結果は" .$time[0]->[0] ." - ". $time[0]->[1];
       if ($time[1]) {
-        say "結果は" .$time[1]->[0] ." - ". $time[1]->[1];
+#        say "結果は" .$time[1]->[0] ." - ". $time[1]->[1];
       }
 #      say @time;
       push @$tmp,@time;
@@ -273,7 +283,7 @@ sub _divide {
 ###    "say scalar @$times . ":" .scalar @$result;"
     return $result;
   } else {
-    say "recursive".scalar @$result . ":" .scalar @$base_time;
+#    say "recursive".scalar @$result . ":" .scalar @$base_time;
 #    say $result->[0];
     return $self->_divide($result,$r);
   }
@@ -415,6 +425,22 @@ sub _is_time_piece {
 }
 
 #重なっている時間帯をまとめる
+#重なってないやつもつっこんどく
+#
+=pod
+データ形式
+[
+  [
+    1,2 #id 1,2が関係性がある
+  ],
+  [
+    3,4 #id 3,4が関係性がある
+  ],
+  [
+    5 #単一のやつ
+  ]
+]
+=cut
 sub _relation_group {
   my $self = shift;
   my $times = shift;
@@ -429,8 +455,8 @@ sub _relation_group {
   foreach my $b1 (@band_timesA) {
     shift @band_timesB; #同じのと比較しないように
     foreach my $b2 (@band_timesB) {
-      say $b1->[0]->datetime." - ".$b1->[1]->datetime . " と "
-      . $b2->[0]->datetime." - ".$b2->[1]->datetime."を比較します";
+#      say $b1->[0]->datetime." - ".$b1->[1]->datetime . " と "
+#      . $b2->[0]->datetime." - ".$b2->[1]->datetime."を比較します";
 
       #重なっているステータスを確認
       my $rtn = $self->_time_overlap_status($b1,$b2);
@@ -440,13 +466,16 @@ sub _relation_group {
         push @{$relation->{$b1->[4]}} ,$b2->[4];
         push @{$relation->{$b2->[4]}} ,$b1->[4];
       } else {
-        $no_relation->{$b1->[0]->epoch} = $b1;
+        $no_relation->{$b1->[4]} = $b1->[4];
+        $no_relation->{$b2->[4]} = $b2->[4];
       }
     }
   }
-  #say Dumper $no_relation;
-  say Dumper keys %$no_relation;
 
+  #say Dumper $no_relation;
+#  say Dumper keys %$no_relation;
+
+  #relationから組み合わせをユニークにする
   my $temp_group = [];
   foreach my $key (keys %$relation) {
     if (exists $relation->{$key}) {
@@ -455,7 +484,8 @@ sub _relation_group {
         my $rel_key = $relation->{$rel};
         if (scalar @$rel_key == 1) {
           if ($key == $rel_key->[0]) {
-            #関連しているのが 反対する時間
+            #関連しているのが 使用されている組み、
+            #要素が入れ替わっているだけの組み は消す
             delete $relation->{$rel};
           } else {
             warn "error";
@@ -474,6 +504,10 @@ sub _relation_group {
     my $ary = [int $key,@{$relation->{$key}}];
     push @$temp_group,$ary;
   }
+  foreach my $key (keys %$no_relation) {
+    my $ids = [$key];
+    push @$temp_group,$ids;
+  }
   return $temp_group;
 }
 
@@ -488,5 +522,16 @@ sub _is_same_time {
     return 0;
   }
 }
+
+sub _sort_time {
+  my $self = shift;
+  my $time = shift;
+
+  return $time if (scalar @$time == 1);
+
+  $time = [sort {$a->[0] <=> $b->[0]} @$time];
+  return $time;
+}
+
 
 1;
