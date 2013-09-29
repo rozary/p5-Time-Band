@@ -12,8 +12,8 @@ use Test::More;
 use Test::Difflet qw/is_deeply/;
 #use Test::Base;
 use Test::Base::Less;
-use lib "./";
-use Band;
+use lib "lib";
+use Time::Band;
 
 plan tests=>8;
 

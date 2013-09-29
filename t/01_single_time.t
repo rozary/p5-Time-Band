@@ -9,12 +9,11 @@ use Time::Piece::MySQL;
 use Try::Tiny;
 use Test::More;
 use Test::Difflet qw/is_deeply/;
-#use Test::Base;
 use Test::Base::Less;
-use lib "./";
-use Band;
+use lib "lib/";
+use Time::Band;
 
-plan tests => 8;
+plan tests => 6;
 
 filters {
   expected=>["eval"],
@@ -28,26 +27,22 @@ foreach my $block (blocks()) {
   my $expected = $block->expected;
   my $tb = Time::Band->new(start=>$s_t1,end=>$e_t1);
   my $res = $tb->result;
-  is_deeply($expected,$res,$block->name);
+  is_deeply($res,$expected,$block->name);
 
 
   $tb = Time::Band->new();
   $tb->add($s_t1,$e_t1);
   $res = $tb->result;
-  foreach my $e (@$expected) {
-    foreach my $r (@$res) {
-      is($e->[0],$r->[0],sprintf("%s %s add",$block->name,$r->[0]->datetime));
-      is($e->[1],$r->[1],sprintf("%s %s add",$block->name,$r->[1]->datetime));
-    }
-  }
+  is_deeply($res,$expected,"add");
 
   $expected = $block->expected_except;
   $tb = Time::Band->new();
   $tb->except($s_t1,$e_t1);
   $res = $tb->result;
-  is_deeply($expected,$res,"except");
+  is_deeply($res,$expected,"except");
 }
 
+print "END";
 
 done_testing;
 
@@ -66,12 +61,11 @@ $e_t->epoch;
   [
     $s_t,
     $e_t,
-    1,1,1
   ]
 ]
 --- expected_except: []
 
-=== over_time
+=== single_over_time
 --- start_time: 2013-07-01 23:00:00
 --- end_time: 2013-07-02 23:00:00
 --- expected
@@ -84,7 +78,6 @@ $e_t->epoch;
   [
     $s_t,
     $e_t,
-    1,1,1
   ]
 ]
 --- expected_except: []
