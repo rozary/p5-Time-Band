@@ -6,13 +6,13 @@ use Data::Dumper;
 use Time::Piece;
 use Time::Piece::MySQL;
 use autodie;
-#use Smart::Comments;
+use Smart::Comments;
 
-#0:開始時間
-#1:終了時間
-#2:肯定、否定フラグ
-#3:優先度
-#4:id
+my $START_TIME = 0;#0:開始時間
+my $END_TIME = 1;#1:終了時間
+my $AE_FLG = 2;#2:肯定、否定フラグ
+my $PRIORITY = 3;#3:優先度
+my $ID = 4;#4:id
 
 has "start" => (is=>"rw",isa=>"Time::Piece");
 has "end" => (is=>"rw",isa=>"Time::Piece");
@@ -72,7 +72,6 @@ sub except {
     die "second args is not Time::Piece object at except";
   }
 
-
   if ($priority) {
     my $ary = $self->_band_times;
     my @after = splice @$ary , $priority - 1;
@@ -103,6 +102,7 @@ sub result {
   }
 
   $rtn = $self->_sort_time($rtn); 
+#  $rtn = $self->_add1sec($rtn); 
   return $rtn;
 }
 
@@ -127,17 +127,18 @@ sub _to_no_relation {
   my $temp = {};
   
   foreach my $r (@$relation_group) {
-
     #ここはひとまとめ
     my $base_id = shift @$r;
     my $base_time = [$self->_by_time_id($base_id)];
 
     $base_time = $self->_divide($base_time,$r);
-    push $result ,@$base_time;
+    #0は、exceptしまくった結果何もなかった場合0になってる。
+    push $result ,@$base_time if (scalar @$base_time != 0);
   }
 
   return $result;
 }
+
 
 sub _divide {
   my $self = shift;
@@ -146,10 +147,16 @@ sub _divide {
 
   my $result;
   my $id = shift @$r;
-#  say @$base_time;
+  #要素が一つなら返す。
   unless ($id) {
-#    say scalar @$base_time;
-    return $base_time;
+    my $ae_flg = $base_time->[0]->[$AE_FLG] || 2;
+    if ($ae_flg == 1) {
+      return $base_time;
+    } elsif ($ae_flg == 2) {
+      return [];
+    } else {
+      return [];
+    }
   }
 
   my $tmp = [];
@@ -185,7 +192,6 @@ sub _divide {
           #時間が被った
           #|A |B B| A|
         } elsif ($status == 1) {
-          say "satus 1";
           @time = [$times->[0],$times->[3],1];
 
           #時間が被った
@@ -201,6 +207,8 @@ sub _divide {
           #|B |A |B |A
         } elsif ($status == 4) {
           @time = [$times->[0],$times->[3],1];
+        } elsif ($status == 5) {
+          @time = [$times->[0],$times->[3],1];
         }
       } elsif ($add_except_flgA == 1 && $add_except_flgB == 2) {
         if ($status == 0) {
@@ -210,29 +218,22 @@ sub _divide {
           #時間が被った
           #|A |B B| A|
         } elsif ($status == 1) {
-          say "status 1 1 & 2";
-          #ここおけ
-          $times->[1] -= 1;
-          $times->[2] += 1;
           @time = ([$times->[0],$times->[1],1],[$times->[2],$times->[3],1]);
 
           #時間が被った
           #|B |A A| B|
         } elsif ($status == 2) {
-          say "status 2";
-          @time = [$times->[1],$times->[2],1];
+#          @time = [$times->[1],$times->[2],1];
           #時間が被った
           #|A |B |A |B
         } elsif ($status == 3) {
-#          say "status 3 1 & 2";
-          $times->[1] -= 1;
           @time = [$times->[0],$times->[1],1];
           #時間が被った
           #|B |A |B |A
         } elsif ($status == 4) {
-#          say "status 4 koko";
-          @time = [$times->[1],$times->[3],1];
-#          say $times->[1],$times->[3];
+          @time = [$times->[2],$times->[3],1];
+        } elsif ($status == 5) {
+          @time = [$times->[0],$times->[1],1];
         }
       } elsif ($add_except_flgA == 2 && $add_except_flgB == 1) {
         if ($status == 0) {
@@ -260,6 +261,8 @@ sub _divide {
         } elsif ($status == 4) {
           $times->[1] -= 1;
           @time = [$times->[0],$times->[1],1];
+        } elsif ($status == 5) {
+          @time = [$times->[2],$times->[3],1];
         }
       }
 
@@ -280,7 +283,7 @@ sub _divide {
 
   $result = $tmp;
   if (scalar @$result == scalar @$base_time && scalar @$r == 0) {
-###    "say scalar @$times . ":" .scalar @$result;"
+#    "say scalar @$times . ":" .scalar @$result;"
     return $result;
   } else {
 #    say "recursive".scalar @$result . ":" .scalar @$base_time;
@@ -354,22 +357,33 @@ sub _time_overlap_status {
   my $times = [];
   #ソートしてAABBの順番を判定する処理って早いかな?
 
-  #|A |A |B |B
+  #|A |A |space|B |B
   #重なってないパターン
-  # $timeA->[1] < $timeB->[0]; <= じゃないです。
   if ($timeA->[0] <= $timeA->[1] && $timeA->[1] < $timeB->[0]
     && $timeB->[0] <= $timeB->[1] ) {
 
     $rtn = 0;
     $times = [$timeA->[0],$timeA->[1],$timeB->[0],$timeB->[1]];
 
-    #|B |B |A |A
+    #|B |B |space|A |A
     #重なってないパターン
     # $timeB->[1] < $timeA->[0]; <= じゃないです。
   } elsif ($timeB->[0] <= $timeB->[1] && $timeB->[1] < $timeA->[0]
     && $timeA->[0] <= $timeA->[1] ) {
 
     $rtn = 0;
+    $times = [$timeB->[0],$timeB->[1],$timeA->[0],$timeA->[1]];
+  } elsif ($timeA->[0] <= $timeA->[1] && $timeA->[1] == $timeB->[0]
+    && $timeB->[0] <= $timeB->[1] ) {
+    #|A |A B|B
+
+    $rtn = 5;
+    $times = [$timeA->[0],$timeA->[1],$timeB->[0],$timeB->[1]];
+
+  } elsif ($timeB->[0] <= $timeB->[1] && $timeB->[1] == $timeA->[0]
+    && $timeA->[0] <= $timeA->[1] ) {
+    #|B |B A|A
+    $rtn = 5;
     $times = [$timeB->[0],$timeB->[1],$timeA->[0],$timeA->[1]];
 
     #|A |B B| A|
@@ -533,5 +547,32 @@ sub _sort_time {
   return $time;
 }
 
+sub _add1sec {
+  my $self = shift;
+  my $time = shift;
+
+#  $time = [map {$_->[1] ++ } @$time];
+  $_->[1] += 1 for @$time;
+#  say $_->[1] for @$time;
+  return $time;
+}
+
+sub _debug_print {
+  my $self = shift;
+  my $times = shift;
+
+  if (ref $times eq "ARRAY") {
+    foreach my $ts (@$times) {
+      foreach my $t (@$ts) {
+        if (ref $t eq "Time::Piece") {
+          my $dt = $t->datetime;
+          ### $dt
+        } else {
+          ### $t
+        }
+      }
+    }
+  }
+}
 
 1;
