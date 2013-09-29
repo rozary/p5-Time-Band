@@ -6,7 +6,7 @@ use Data::Dumper;
 use Time::Piece;
 use Time::Piece::MySQL;
 use autodie;
-use Smart::Comments;
+#use Smart::Comments;
 
 my $START_TIME = 0;#0:開始時間
 my $END_TIME = 1;#1:終了時間
@@ -85,14 +85,7 @@ sub except {
 sub result {
   my $self = shift;
 
-  #先頭にある奴が優先度高
-  my $band_times = $self->_band_times;
-  
-  #baseは一番弱い
-  if (scalar @{$self->_base}  > 0) {
-    push @$band_times,$self->_base;
-  }
-
+  my $band_times = $self->_get_all_times;
   my $rtn = $self->_to_no_relation($band_times);
   #余分な情報消す
   foreach (@$rtn) {
@@ -102,6 +95,7 @@ sub result {
   }
 
   $rtn = $self->_sort_time($rtn); 
+  $self->_debug_print($rtn);
 #  $rtn = $self->_add1sec($rtn); 
   return $rtn;
 }
@@ -123,7 +117,7 @@ sub _to_no_relation {
   }
 
   my ($relation_group,$no_relation) = $self->_relation_group($times);
-#  say Dumper $relation_group;
+### $relation_group;
   my $temp = {};
   
   foreach my $r (@$relation_group) {
@@ -298,8 +292,21 @@ sub _by_time_id {
 
   my @band_times = @{$self->_band_times};
   my @time = grep {$_->[4] == $id} @band_times;
-#  say $time->[0]->[0];
   return $time[0];
+}
+
+sub _debug_print_by_id_info {
+  my $self = shift;
+  my $idss = shift;
+
+  foreach my $ids (@$idss) {
+    foreach my $id (@$ids) {
+      my $time = $self->_by_time_id($id);
+      my $st = $time->[$START_TIME];
+      my $et = $time->[$END_TIME];
+      printf("id:%d,st:%s,et:%s\n", $id,$st,$et);
+    }
+  }
 }
 
 my $s_t1 = localtime->from_mysql_datetime("2013-07-01 10:00:00");
@@ -480,14 +487,13 @@ sub _relation_group {
         push @{$relation->{$b1->[4]}} ,$b2->[4];
         push @{$relation->{$b2->[4]}} ,$b1->[4];
       } else {
-        $no_relation->{$b1->[4]} = $b1->[4];
-        $no_relation->{$b2->[4]} = $b2->[4];
+#        $no_relation->{$b1->[4]} = $b1->[4];
+#        $no_relation->{$b2->[4]} = $b2->[4];
+        $no_relation->{$b1->[4]} = 1;
+        $no_relation->{$b2->[4]} = 1;
       }
     }
   }
-
-  #say Dumper $no_relation;
-#  say Dumper keys %$no_relation;
 
   #relationから組み合わせをユニークにする
   my $temp_group = [];
@@ -513,15 +519,25 @@ sub _relation_group {
     }
   }
 
-  
+  my @used_ids;
   foreach my $key (keys %$relation) {
     my $ary = [int $key,@{$relation->{$key}}];
+    push @used_ids,@$ary;
     push @$temp_group,$ary;
   }
-  foreach my $key (keys %$no_relation) {
-    my $ids = [$key];
-    push @$temp_group,$ids;
+
+  ### temp_group;
+
+  #relationに使われているidをno_relationから消す
+  ### @used_ids;
+  ### $no_relation;
+  foreach my $id (@used_ids) {
+    delete $no_relation->{$id};
   }
+  my $no_rel = [grep {$no_relation->{$_} == 1} keys %$no_relation];
+  ### $no_rel;
+  push @$temp_group,map {[int $_]} @$no_rel;
+
   return $temp_group;
 }
 
@@ -573,6 +589,17 @@ sub _debug_print {
       }
     }
   }
+}
+
+sub _get_all_times {
+  my $self = shift;
+
+  my $times = $self->_band_times;
+  if (scalar @{$self->_base}  > 0) {
+    #baseは優先度低
+    push @$times,$self->_base;
+  }
+  return $times;
 }
 
 1;
