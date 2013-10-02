@@ -171,8 +171,8 @@ sub _divide {
       my $flg_comment = {1=>"加",2=>"減"};
       say "flgAは".$flg_comment->{$add_except_flgA} .
       " / flgBは". $flg_comment->{$add_except_flgB};
-      say $bt->[0]->datetime. " - " .$bt->[1]->datetime;
-      say $time->[0]->datetime. " - " .$time->[1]->datetime;
+      say "時間A:".$bt->[0]->datetime. " - " .$bt->[1]->datetime;
+      say "時間B:".$time->[0]->datetime. " - " .$time->[1]->datetime;
       say " は時間が交わっています";
       ### $status
 
@@ -200,7 +200,7 @@ sub _divide {
           #|B |A |B |A
         } elsif ($status == 4) {
           @time = [$times->[0],$times->[3],1];
-        } elsif ($status == 5) {
+        } elsif ($status == 5 || $status == 6) {
           @time = [$times->[0],$times->[3],1];
         }
       } elsif ($add_except_flgA == 1 && $add_except_flgB == 2) {
@@ -233,7 +233,11 @@ sub _divide {
         } elsif ($status == 4) {
           @time = [$times->[2],$times->[3],1];
         } elsif ($status == 5) {
+          #|A |A ==  B |B
           @time = [$times->[0],$times->[1],1];
+        } elsif ($status == 6) {
+          #|B |B ==  A |A
+          @time = [$times->[2],$times->[3],1];
         }
       } elsif ($add_except_flgA == 2 && $add_except_flgB == 1) {
         if ($status == 0) {
@@ -266,7 +270,11 @@ sub _divide {
 #          $times->[1] -= 1;
           @time = [$times->[0],$times->[1],1];
         } elsif ($status == 5) {
+          #|A |A ==  B |B
           @time = [$times->[2],$times->[3],1];
+        } elsif ($status == 6) {
+          #|B |B ==  A |A
+          @time = [$times->[0],$times->[1],1];
         }
       }
 
@@ -399,7 +407,7 @@ sub _time_overlap_status {
   } elsif ($timeB->[0] <= $timeB->[1] && $timeB->[1] == $timeA->[0]
     && $timeA->[0] <= $timeA->[1] ) {
     #|B |B A|A
-    $rtn = 5;
+    $rtn = 6;
     $times = [$timeB->[0],$timeB->[1],$timeA->[0],$timeA->[1]];
 
     #|A |B B| A|
