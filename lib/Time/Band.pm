@@ -6,7 +6,7 @@ use Data::Dumper;
 use Time::Piece;
 use Time::Piece::MySQL;
 use autodie;
-#use Smart::Comments;
+use Smart::Comments;
 
 my $START_TIME = 0;#0:開始時間
 my $END_TIME = 1;#1:終了時間
@@ -95,7 +95,7 @@ sub result {
   }
 
   $rtn = $self->_sort_time($rtn); 
-  $self->_debug_print($rtn);
+#  $self->_debug_print($rtn);
 #  $rtn = $self->_add1sec($rtn); 
   return $rtn;
 }
@@ -116,7 +116,7 @@ sub _to_no_relation {
     }
   }
 
-  my ($relation_group,$no_relation) = $self->_relation_group($times);
+  my $relation_group = $self->_relation_group($times);
 ### $relation_group;
   my $temp = {};
   
@@ -168,14 +168,13 @@ sub _divide {
 
     if ($status != 0) {
 
-=pod
       my $flg_comment = {1=>"加",2=>"減"};
       say "flgAは".$flg_comment->{$add_except_flgA} .
       " / flgBは". $flg_comment->{$add_except_flgB};
       say $bt->[0]->datetime. " - " .$bt->[1]->datetime;
       say $time->[0]->datetime. " - " .$time->[1]->datetime;
       say " は時間が交わっています";
-=cut
+      ### $status
 
       my @time;
       if ($add_except_flgA == 1 && $add_except_flgB == 1) {
@@ -212,11 +211,18 @@ sub _divide {
           #時間が被った
           #|A |B B| A|
         } elsif ($status == 1) {
-          @time = ([$times->[0],$times->[1],1],[$times->[2],$times->[3],1]);
+          if ($times->[0] == $times->[1]) {
+            @time = ([$times->[2],$times->[3],1]);
+          } elsif ($times->[2] == $times->[3]) {
+            @time = ([$times->[0],$times->[1],1]);
+          } else {
+            @time = ([$times->[0],$times->[1],1],[$times->[2],$times->[3],1]);
+          }
 
           #時間が被った
           #|B |A A| B|
         } elsif ($status == 2) {
+          #何もなし
 #          @time = [$times->[1],$times->[2],1];
           #時間が被った
           #|A |B |A |B
@@ -242,38 +248,41 @@ sub _divide {
           #時間が被った
           #|B |A A| B|
         } elsif ($status == 2) {
-          $times->[1] -= 1;
-          $times->[2] += 1;
-          @time = ([$times->[0],$times->[1],1],[$times->[2],$times->[3],1]);
+          if ($times->[0] == $times->[1]) {
+            @time = ([$times->[2],$times->[3],1]);
+          } elsif ($times->[2] == $times->[3]) {
+            @time = ([$times->[0],$times->[1],1]);
+          } else {
+            @time = ([$times->[0],$times->[1],1],[$times->[2],$times->[3],1]);
+          }
           #時間が被った
           #|A |B |A |B
         } elsif ($status == 3) {
-          $times->[2] += 1;
+#          $times->[2] += 1;
           @time = [$times->[2],$times->[3],1];
           #時間が被った
           #|B |A |B |A
         } elsif ($status == 4) {
-          $times->[1] -= 1;
+#          $times->[1] -= 1;
           @time = [$times->[0],$times->[1],1];
         } elsif ($status == 5) {
           @time = [$times->[2],$times->[3],1];
         }
       }
 
-#      say $time->[0];
-#      say "結果は" .$time[0]->[0] ." - ". $time[0]->[1];
-      if ($time[1]) {
-#        say "結果は" .$time[1]->[0] ." - ". $time[1]->[1];
+      foreach my $t (@time) {
+        if ($t) {
+          print "結果は" .$t->[0] ." - ". $t->[1]."\n";
+        }
       }
-#      say @time;
+      say "====終了====";
+
       push @$tmp,@time;
     } else {
       push @$tmp, $bt;
       #ここで関連性がないものはいらない。
     }
   }
-#  say 99999;
-#  say $tmp;
 
   $result = $tmp;
   if (scalar @$result == scalar @$base_time && scalar @$r == 0) {
@@ -484,49 +493,52 @@ sub _relation_group {
       my $status = $rtn->[0];
       my $times = $rtn->[1];
       if ($status != 0) {
-        push @{$relation->{$b1->[4]}} ,$b2->[4];
-        push @{$relation->{$b2->[4]}} ,$b1->[4];
+        $relation->{$b1->[4]}->{$b2->[4]}++;
+        $relation->{$b2->[4]}->{$b1->[4]}++;
       } else {
-#        $no_relation->{$b1->[4]} = $b1->[4];
-#        $no_relation->{$b2->[4]} = $b2->[4];
         $no_relation->{$b1->[4]} = 1;
         $no_relation->{$b2->[4]} = 1;
       }
     }
   }
 
+  ### $relation
+
   #relationから組み合わせをユニークにする
   my $temp_group = [];
   foreach my $key (keys %$relation) {
     if (exists $relation->{$key}) {
-      foreach my $rel (@{$relation->{$key}}) {
+      foreach my $rel (keys %{$relation->{$key}}) {
         #関連している時間たち
-        my $rel_key = $relation->{$rel};
-        if (scalar @$rel_key == 1) {
-          if ($key == $rel_key->[0]) {
-            #関連しているのが 使用されている組み、
-            #要素が入れ替わっているだけの組み は消す
-            delete $relation->{$rel};
-          } else {
-            warn "error";
-          }
-        } else {
-          #別のやつで繋がってるやつあり
-          #ここ処理追加しないと駄目だと思う
+        my @rel_keys = keys %{$relation->{$rel}};
+
+        ### @rel_keys
+        foreach my $rel_key (@rel_keys) {
+          $relation->{$key}->{$rel_key} ++;
         }
       }
-#      push @$temp_group,[$key,$rel];
     }
   }
 
   my @used_ids;
   foreach my $key (keys %$relation) {
-    my $ary = [int $key,@{$relation->{$key}}];
-    push @used_ids,@$ary;
-    push @$temp_group,$ary;
+    my $ary = [map {int $_} keys %{$relation->{$key}}];
+
+    #同じ組み合わせがあるか確認
+    my $flg = 0;
+    foreach my $tg (@$temp_group) {
+      next if ($flg); #flgが立ってたら、同じ組みがすでに存在していることを確認済み
+      $flg = $self->_is_opposit_combi($tg,$ary);
+    }
+    if (!$flg) {
+      #組み合わせなければ、resultに追加する。
+      push @used_ids,@$ary;
+      push @$temp_group,$ary;
+    }
   }
 
   ### temp_group;
+  ### $temp_group;
 
   #relationに使われているidをno_relationから消す
   ### @used_ids;
@@ -600,6 +612,41 @@ sub _get_all_times {
     push @$times,$self->_base;
   }
   return $times;
+}
+
+sub _sort_ids {
+  my $self = shift;
+  my $idss = shift;
+
+  foreach my $ids (@$idss) {
+    $ids = [sort @$ids];
+  }
+  return $idss;
+}
+
+sub _is_opposit_combi {
+  my $self = shift;
+  my $combi1 = shift;
+  my $combi2 = shift;
+
+  my $hash = {};
+  map {$hash->{$_}++} @$combi1,@$combi2;
+  my $count = grep {$hash->{$_} == 1} keys %$hash;
+  if ($count == 0) {
+    return 1;
+  }
+  return 0;
+}
+
+sub _debug_output_string_band_times {
+  my $self = shift;
+
+  my $times = $self->_band_times;
+  my $string;
+  foreach my $ts (@$times) {
+    $string .= $ts->[0]->datetime."-".$ts->[1]->datetime."-"."flg:".$ts->[2]."\n";
+  }
+  return $string;
 }
 
 1;
