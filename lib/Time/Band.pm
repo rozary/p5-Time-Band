@@ -124,6 +124,7 @@ sub _to_no_relation {
     #ここはひとまとめ
     my $base_id = shift @$r;
     my $base_time = [$self->_by_time_id($base_id)];
+#    say "base_time".$base_time->[0]->[0]->datetime;
 
     $base_time = $self->_divide($base_time,$r);
     #0は、exceptしまくった結果何もなかった場合0になってる。
@@ -158,9 +159,17 @@ sub _divide {
 #    say @$bt;
 #    say "idは".$id;
     my $time = $self->_by_time_id($id);
+    ### <line>
+    say "base_time".$bt->[0]->datetime;
+    say "base_time".$bt->[1]->datetime;
+    say "base_time flg".$bt->[2];
+    say "time".$time->[0]->datetime;
+    say "time".$time->[1]->datetime;
+    say "time flg".$time->[2];
+
     my $rtn = $self->_time_overlap_status($bt,$time);
     my $status = $rtn->[0];
-#    say $status;
+    ### $status;
     my $times = $rtn->[1];
 
     my $add_except_flgA = $bt->[2];
@@ -617,7 +626,8 @@ sub _get_all_times {
   my $times = $self->_band_times;
   if (scalar @{$self->_base}  > 0) {
     #baseは優先度低
-    push @$times,$self->_base;
+#    push @$times,$self->_base;
+    unshift @$times,$self->_base;
   }
   return $times;
 }
@@ -649,7 +659,8 @@ sub _is_opposit_combi {
 sub _debug_output_string_band_times {
   my $self = shift;
 
-  my $times = $self->_band_times;
+#  my $times = $self->_band_times;
+  my $times = $self->_get_all_times;
   my $string;
   foreach my $ts (@$times) {
     $string .= $ts->[0]->datetime."-".$ts->[1]->datetime."-"."flg:".$ts->[2]."\n";
