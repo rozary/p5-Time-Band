@@ -116,17 +116,15 @@ sub _to_no_relation {
     }
   }
 
+#--- expected: {1=>[2,3,4,5,6],7=>[8]}
   my $relation_group = $self->_relation_group($times);
 ### $relation_group;
   my $temp = {};
   
-  foreach my $r (@$relation_group) {
-    #ここはひとまとめ
-    my $base_id = shift @$r;
+  foreach my $base_id (keys %$relation_group) {
     my $base_time = [$self->_by_time_id($base_id)];
-#    say "base_time".$base_time->[0]->[0]->datetime;
-
-    $base_time = $self->_divide($base_time,$r);
+    my $rel_ids = $relation_group->{$base_id};
+    $base_time = $self->_divide($base_time,$rel_ids);
     #0は、exceptしまくった結果何もなかった場合0になってる。
     push $result ,@$base_time if (scalar @$base_time != 0);
   }
@@ -510,9 +508,11 @@ sub _relation_group {
       my $status = $rtn->[0];
       my $times = $rtn->[1];
       if ($status != 0) {
+        #重なってる
         $relation->{$b1->[4]}->{$b2->[4]}++;
         $relation->{$b2->[4]}->{$b1->[4]}++;
       } else {
+        #重なってない
         $no_relation->{$b1->[4]} = 1;
         $no_relation->{$b2->[4]} = 1;
       }
@@ -523,51 +523,24 @@ sub _relation_group {
 
   #relationから組み合わせをユニークにする
   my $temp_group = [];
-  foreach my $key (keys %$relation) {
+  #キー数が多い奴を土台にする為
+  #relation_idを関わる要素が多い方からソート
+  my @keys_ary = sort {keys %{$relation->{$b}} <=> keys %{$relation->{$a}}} (keys %$relation);
+  foreach my $key (@keys_ary) {
     if (exists $relation->{$key}) {
-      foreach my $rel (keys %{$relation->{$key}}) {
-        #関連している時間たち
-        my @rel_keys = keys %{$relation->{$rel}};
-
-        ### @rel_keys
-        foreach my $rel_key (@rel_keys) {
-          $relation->{$key}->{$rel_key} ++;
-        }
+      my $rel_keys = $relation->{$key};
+      my $keys_ary;
+      foreach my $k (keys %$rel_keys) {
+        delete $relation->{$k};
+        push @$keys_ary,int $k;
       }
+      $relation->{$key} = $keys_ary;
     }
   }
+  ### @keys_ary;
+  ### $relation;
 
-  my @used_ids;
-  foreach my $key (keys %$relation) {
-    my $ary = [map {int $_} keys %{$relation->{$key}}];
-
-    #同じ組み合わせがあるか確認
-    my $flg = 0;
-    foreach my $tg (@$temp_group) {
-      next if ($flg); #flgが立ってたら、同じ組みがすでに存在していることを確認済み
-      $flg = $self->_is_opposit_combi($tg,$ary);
-    }
-    if (!$flg) {
-      #組み合わせなければ、resultに追加する。
-      push @used_ids,@$ary;
-      push @$temp_group,$ary;
-    }
-  }
-
-  ### temp_group;
-  ### $temp_group;
-
-  #relationに使われているidをno_relationから消す
-  ### @used_ids;
-  ### $no_relation;
-  foreach my $id (@used_ids) {
-    delete $no_relation->{$id};
-  }
-  my $no_rel = [grep {$no_relation->{$_} == 1} keys %$no_relation];
-  ### $no_rel;
-  push @$temp_group,map {[int $_]} @$no_rel;
-
-  return $temp_group;
+  return $relation;
 }
 
 sub _is_same_time {
@@ -632,14 +605,15 @@ sub _get_all_times {
   return $times;
 }
 
+#relation_groupで出てきたidの配列をソートする奴
 sub _sort_ids {
   my $self = shift;
-  my $idss = shift;
+  my $group = shift;
 
-  foreach my $ids (@$idss) {
-    $ids = [sort @$ids];
+  foreach my $id (keys %$group) {
+    $group->{$id} = [sort @{$group->{$id}}];
   }
-  return $idss;
+  return $group;
 }
 
 sub _is_opposit_combi {
