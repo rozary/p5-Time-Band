@@ -33,7 +33,7 @@ foreach my $block (blocks()) {
   $tb->except($s_t2,$e_t2);
   my $res = $tb->result;
 
-  is_deeply($res,$expected,$block->name);
+  is_deeply($expected,$res,$block->name);
 }
 
 done_testing;
@@ -83,8 +83,8 @@ $e_t2->epoch;
 --- end_time2: 2013-07-01 15:00:00
 --- expected
 use Time::Piece;
-my $s_t1 = localtime->strptime("2013-07-01 10:00:00","%Y-%m-%d %T");
-my $e_t2 = localtime->strptime("2013-07-01 15:00:00","%Y-%m-%d %T");
+my $s_t1 = localtime->strptime("2013-07-01 15:00:00","%Y-%m-%d %T");
+my $e_t2 = localtime->strptime("2013-07-01 23:00:00","%Y-%m-%d %T");
 $s_t1->epoch;
 $e_t2->epoch;
 [

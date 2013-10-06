@@ -35,8 +35,6 @@ foreach my $block (blocks()) {
   $tb->add($s_t3,$e_t3);
   my $res = $tb->result;
 
-  print scalar @$res;
-  print "\n";
   is_deeply($res,$expected,$block->name);
 }
 
@@ -105,5 +103,93 @@ $e_t2->epoch;
   [
     $s_t2,
     $e_t2,
+  ],
+]
+
+=== triple time A A space B B C C
+--- start_time1: 2013-07-01 10:00:00
+--- end_time1: 2013-07-01 14:00:00
+--- start_time2: 2013-07-01 15:00:00
+--- end_time2: 2013-07-01 16:00:00
+--- start_time3: 2013-07-01 16:00:00
+--- end_time3: 2013-07-01 23:00:00
+--- expected
+use Time::Piece;
+my $s_t1 = localtime->strptime("2013-07-01 10:00:00","%Y-%m-%d %T");
+my $e_t1 = localtime->strptime("2013-07-01 14:00:00","%Y-%m-%d %T");
+my $s_t2 = localtime->strptime("2013-07-01 15:00:00","%Y-%m-%d %T");
+my $e_t2 = localtime->strptime("2013-07-01 23:00:00","%Y-%m-%d %T");
+$s_t1->epoch;
+$e_t1->epoch;
+$s_t2->epoch;
+$e_t2->epoch;
+[
+  [
+    $s_t1,
+    $e_t1,
+  ],
+  [
+    $s_t2,
+    $e_t2,
+  ],
+]
+
+=== triple time A A B B C C
+--- start_time1: 2013-07-01 10:00:00
+--- end_time1: 2013-07-01 14:00:00
+--- start_time2: 2013-07-01 14:00:00
+--- end_time2: 2013-07-01 16:00:00
+--- start_time3: 2013-07-01 16:00:00
+--- end_time3: 2013-07-01 23:00:00
+--- expected
+use Time::Piece;
+my $s_t1 = localtime->strptime("2013-07-01 10:00:00","%Y-%m-%d %T");
+my $e_t1 = localtime->strptime("2013-07-01 23:00:00","%Y-%m-%d %T");
+$s_t1->epoch;
+$e_t1->epoch;
+[
+  [
+    $s_t1,
+    $e_t1,
+  ],
+]
+
+=== triple time A B A B C C
+--- start_time1: 2013-07-01 10:00:00
+--- end_time1: 2013-07-01 15:00:00
+--- start_time2: 2013-07-01 14:00:00
+--- end_time2: 2013-07-01 16:00:00
+--- start_time3: 2013-07-01 16:00:00
+--- end_time3: 2013-07-01 23:00:00
+--- expected
+use Time::Piece;
+my $s_t1 = localtime->strptime("2013-07-01 10:00:00","%Y-%m-%d %T");
+my $e_t1 = localtime->strptime("2013-07-01 23:00:00","%Y-%m-%d %T");
+$s_t1->epoch;
+$e_t1->epoch;
+[
+  [
+    $s_t1,
+    $e_t1,
+  ],
+]
+
+=== triple time A B B A C C
+--- start_time1: 2013-07-01 10:00:00
+--- end_time1: 2013-07-01 16:00:00
+--- start_time2: 2013-07-01 14:00:00
+--- end_time2: 2013-07-01 16:00:00
+--- start_time3: 2013-07-01 16:00:00
+--- end_time3: 2013-07-01 23:00:00
+--- expected
+use Time::Piece;
+my $s_t1 = localtime->strptime("2013-07-01 10:00:00","%Y-%m-%d %T");
+my $e_t1 = localtime->strptime("2013-07-01 23:00:00","%Y-%m-%d %T");
+$s_t1->epoch;
+$e_t1->epoch;
+[
+  [
+    $s_t1,
+    $e_t1,
   ],
 ]

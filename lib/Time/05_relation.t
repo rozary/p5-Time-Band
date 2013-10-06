@@ -13,7 +13,7 @@ use Test::Difflet qw/is_deeply/;
 use Test::Base::Less;
 use Band;
 
-plan tests=>8;
+plan tests=>6;
 
 filters {
   expected=>["eval"],
@@ -43,6 +43,7 @@ foreach my $block (blocks()) {
 
   my $times = $tb->_get_all_times;
   my $group = $tb->_relation_group($times);
+  $group = $tb->_sort_ids($group);
 #  $tb->_debug_print_by_id_info($group);
 
   is_deeply($group,$expected,$block->name);
@@ -59,10 +60,7 @@ __DATA__
 --- end_time2: 2013-07-01 16:00:00
 --- start_time3:
 --- end_time3:
---- expected
-[
-  [ 1,2 ],
-]
+--- expected: [ [1,[2]] ]
 
 === double time B B A A
 --- start_time1: 2013-07-01 10:00:00
@@ -71,10 +69,7 @@ __DATA__
 --- end_time2: 2013-07-01 16:00:00
 --- start_time3:
 --- end_time3:
---- expected
-[
-  [ 1,2 ],
-]
+--- expected: [ [1,[2]] ]
 
 === triple time A A space B B space C C
 --- start_time1: 2013-07-01 10:00:00
@@ -83,12 +78,7 @@ __DATA__
 --- end_time2: 2013-07-01 16:00:00
 --- start_time3: 2013-07-01 17:00:00
 --- end_time3: 2013-07-01 23:00:00
---- expected
-[
-  [ 1 ],
-  [ 3 ],
-  [ 2 ],
-]
+--- expected: [ [1,[],] [ 3,[] ], [ 2, [] ] ]
 
 === triple time A A B B space C C
 --- start_time1: 2013-07-01 10:00:00
@@ -97,17 +87,31 @@ __DATA__
 --- end_time2: 2013-07-01 16:00:00
 --- start_time3: 2013-07-01 17:00:00
 --- end_time3: 2013-07-01 23:00:00
---- expected
-use Time::Piece;
-my $s_t1 = localtime->strptime("2013-07-01 10:00:00","%Y-%m-%d %T");
-my $e_t1 = localtime->strptime("2013-07-01 16:00:00","%Y-%m-%d %T");
-my $s_t2 = localtime->strptime("2013-07-01 17:00:00","%Y-%m-%d %T");
-my $e_t2 = localtime->strptime("2013-07-01 23:00:00","%Y-%m-%d %T");
-$s_t1->epoch;
-$e_t1->epoch;
-$s_t2->epoch;
-$e_t2->epoch;
-[
-  [ 1,2 ],
-  [ 3 ],
-]
+--- expected: [ [ 1,[2] ], [ 3,[] ], ]
+
+=== triple time A B A B C C
+--- start_time1: 2013-07-01 10:00:00
+--- end_time1: 2013-07-01 15:00:00
+--- start_time2: 2013-07-01 14:00:00
+--- end_time2: 2013-07-01 16:00:00
+--- start_time3: 2013-07-01 16:00:00
+--- end_time3: 2013-07-01 23:00:00
+--- expected: [ [ 1,[2]],[2,[3]] ]
+
+=== triple time A B B A C C
+--- start_time1: 2013-07-01 10:00:00
+--- end_time1: 2013-07-01 16:00:00
+--- start_time2: 2013-07-01 14:00:00
+--- end_time2: 2013-07-01 16:00:00
+--- start_time3: 2013-07-01 16:00:00
+--- end_time3: 2013-07-01 23:00:00
+--- expected: [ [1,[2,3]] ]
+
+=== triple time A B B C C A
+--- start_time1: 2013-07-01 10:00:00
+--- end_time1: 2013-07-01 23:30:00
+--- start_time2: 2013-07-01 14:00:00
+--- end_time2: 2013-07-01 16:00:00
+--- start_time3: 2013-07-01 16:00:00
+--- end_time3: 2013-07-01 23:00:00
+--- expected: [ [1,[2,3]] ]
