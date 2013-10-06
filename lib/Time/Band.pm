@@ -111,9 +111,9 @@ sub _to_no_relation2 {
   my $self = shift;
   my $times = shift || $self->_hash_times;
 
-  ### $times
   my $base = [$self->_hash_times->{1}];
   my $pri = [2..$self->_priority - 1];
+  ### #pri
   my $result = $self->_rec_norelation($pri,$base);
 
 #  $self->_debug_print($result);
@@ -269,17 +269,19 @@ sub _rec_norelation {
       push @buf, $tmp;
 
       ### $hash_time
-      if (scalar @$pris == 0) {
+      #比較確認する時間が無い時
+#      print Dumper $hash_time;
+      if (scalar @$pris == 0 && $hash_time->[2] == 1) {
         push @buf,$hash_time;
       }
     }
   }
-  $base = \@buf;
 
+  $base = \@buf;
 
 ### $pri
 ### $flg
-  if ($flg == 0) {
+  if ($flg == 0 || scalar @$pris == 0) {
     return $base;
   } else {
     return $self->_rec_norelation($pris,$base);
