@@ -7,7 +7,6 @@ use Time::Piece;
 use Time::Piece::MySQL;
 use autodie;
 use Smart::Comments;
-use Storable qw/dclone/;
 
 my $START_TIME = 0;#0:開始時間
 my $END_TIME = 1;#1:終了時間
@@ -117,7 +116,7 @@ sub _to_no_relation2 {
   my $pri = [2..$self->_priority - 1];
   my $result = $self->_rec_norelation($pri,$base);
 
-  $self->_debug_print($result);
+#  $self->_debug_print($result);
 
   return $result;
 }
@@ -139,11 +138,12 @@ sub _rec_norelation {
     }
   }
 
+  $self->_debug_print($base);
 
   foreach my $tmp (@$base) {
     my $hash_time = $self->_hash_times->{$pri};
-    my $rtn = $self->_time_overlap_status($tmp,$hash_time);
 
+    my $rtn = $self->_time_overlap_status($tmp,$hash_time);
 
     my $status = $rtn->[0];
     my $times = $rtn->[1];
@@ -267,6 +267,11 @@ sub _rec_norelation {
       push @buf ,@time;
     } else {
       push @buf, $tmp;
+
+      ### $hash_time
+      if (scalar @$pris == 0) {
+        push @buf,$hash_time;
+      }
     }
   }
   $base = \@buf;
