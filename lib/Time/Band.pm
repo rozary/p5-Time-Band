@@ -6,7 +6,7 @@ use Data::Dumper;
 use Time::Piece;
 use Time::Piece::MySQL;
 use autodie;
-use Smart::Comments;
+#use Smart::Comments;
 
 my $START_TIME = 0;#0:開始時間
 my $END_TIME = 1;#1:終了時間
@@ -31,7 +31,13 @@ sub BUILD {
   my $self = shift;
 
   if ($self->start && $self->end) {
+
+
+    unless ($self->_is_order_correct($self->start,$self->end)) {
+      die "start and end time is incorrect order";
+    }
     $self->_hash_times->{$self->_priority} =  [$self->start,$self->end,1,$self->_time_id];
+
     $self->_base([$self->start,$self->end,1,$self->_priority++,$self->_time_id++]);
   }
 }
@@ -47,6 +53,10 @@ sub add {
   }
   unless ( $self->_is_time_piece($end)) {
     die "second args is not Time::Piece object at except";
+  }
+
+  unless ($self->_is_order_correct($self->start,$self->end)) {
+    die "start and end time is incorrect order";
   }
 
   &_is_same_time($start,$end); 
@@ -74,6 +84,15 @@ sub except {
   }
   unless ( $self->_is_time_piece($end)) {
     die "second args is not Time::Piece object at except";
+  }
+
+  unless ($self->_is_order_correct($self->start,$self->end)) {
+    die "start and end time is incorrect order";
+  }
+
+  if (&_is_same_time($start,$end)) {
+    warn "same time";
+    return 1;
   }
 
   $self->_hash_times->{$self->_priority} =  [$start,$end,2,$self->_time_id];
@@ -113,7 +132,8 @@ sub _to_no_relation2 {
 
   my $base = [$self->_hash_times->{1}];
   my $pri = [2..$self->_priority - 1];
-  ### #pri
+  #say $self->_priority;
+  ### $pri
   my $result = $self->_rec_norelation($pri,$base);
 
 #  $self->_debug_print($result);
@@ -138,7 +158,7 @@ sub _rec_norelation {
     }
   }
 
-  $self->_debug_print($base);
+#  $self->_debug_print($base);
 
   foreach my $tmp (@$base) {
     my $hash_time = $self->_hash_times->{$pri};
@@ -153,12 +173,14 @@ sub _rec_norelation {
     $flg = 1 if ($status != 0 && $flg == 0);
 
     if ($status != 0) {
+=pod
       my $flg_comment = {1=>"加",2=>"減"};
       say "flgAは".$flg_comment->{$add_except_flgA} .
       " / flgBは". $flg_comment->{$add_except_flgB};
       say "時間A:".$tmp->[0]->datetime. " - " .$tmp->[1]->datetime;
       say "時間B:".$hash_time->[0]->datetime. " - " .$hash_time->[1]->datetime;
       say " は時間が交わっています";
+=cut
       ### $status
 
       my @time;
@@ -190,7 +212,9 @@ sub _rec_norelation {
         }
       } elsif ($add_except_flgA == 1 && $add_except_flgB == 2) {
         if ($status == 1) {
-          if ($times->[0] == $times->[1]) {
+          if ($times->[0] == $times->[1] && $times->[2] == $times->[3]) {
+            #empty
+          } elsif ($times->[0] == $times->[1]) {
             @time = ([$times->[2],$times->[3],1]);
           } elsif ($times->[2] == $times->[3]) {
             @time = ([$times->[0],$times->[1],1]);
@@ -262,7 +286,7 @@ sub _rec_norelation {
           print "結果は" .$t->[0] ." - ". $t->[1]."\n";
         }
       }
-      say "====終了====";
+#      say "====終了====";
 
       push @buf ,@time;
     } else {
@@ -281,9 +305,13 @@ sub _rec_norelation {
 
 ### $pri
 ### $flg
-  if ($flg == 0 || scalar @$pris == 0) {
+### $pris
+  if ($flg == 0 && scalar @$pris == 0) {
+    ### return base <line>
     return $base;
   } else {
+    ### recursive <line>
+    ### $base
     return $self->_rec_norelation($pris,$base);
   }
 }
@@ -346,12 +374,14 @@ sub _divide {
 #    say "idは".$id;
     my $time = $self->_by_time_id($id);
     ### <line>
+=pod
     say "base_time".$bt->[0]->datetime;
     say "base_time".$bt->[1]->datetime;
     say "base_time flg".$bt->[2];
     say "time".$time->[0]->datetime;
     say "time".$time->[1]->datetime;
     say "time flg".$time->[2];
+=cut
 
     my $rtn = $self->_time_overlap_status($bt,$time);
     my $status = $rtn->[0];
@@ -364,11 +394,13 @@ sub _divide {
     if ($status != 0) {
 
       my $flg_comment = {1=>"加",2=>"減"};
+=pod
       say "flgAは".$flg_comment->{$add_except_flgA} .
       " / flgBは". $flg_comment->{$add_except_flgB};
       say "時間A:".$bt->[0]->datetime. " - " .$bt->[1]->datetime;
       say "時間B:".$time->[0]->datetime. " - " .$time->[1]->datetime;
       say " は時間が交わっています";
+=cut
       ### $status
 
       my @time;
@@ -478,7 +510,7 @@ sub _divide {
           print "結果は" .$t->[0] ." - ". $t->[1]."\n";
         }
       }
-      say "====終了====";
+#      say "====終了====";
 
       push @$tmp,@time;
     } else {
@@ -749,6 +781,18 @@ sub _is_same_time {
 
   if ($timesA == $timesB) {
     warn "same time !! misstake?";
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+sub _is_order_correct {
+  my $self = shift;
+  my $timeA = shift;
+  my $timeB = shift;
+
+  if ($timeA <= $timeB) {
     return 1;
   } else {
     return 0;
