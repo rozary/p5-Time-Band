@@ -151,7 +151,7 @@ sub _rec_norelation {
 
   my $pri = shift @$pris;
   if (!$pri) {
-    if ($base->[0]->[2] == 2) {
+    if (scalar @$base != 0 && ($base->[0]->[2] == 2)) {
       return [];
     } else {
       return $base;
