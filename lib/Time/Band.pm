@@ -37,8 +37,9 @@ sub BUILD {
       die "start and end time is incorrect order";
     }
     $self->_hash_times->{$self->_priority} =  [$self->start,$self->end,1,$self->_time_id];
-
-    $self->_base([$self->start,$self->end,1,$self->_priority++,$self->_time_id++]);
+    $self->_priority($self->_priority + 1);
+    $self->_time_id($self->_time_id + 1);
+    $self->_base([$self->start,$self->end,1,$self->_priority,$self->_time_id]);
   }
 }
 
@@ -69,7 +70,9 @@ sub add {
     push @{$self->_band_times} , [$start,$end,1]; #1:add
     push @{$self->_band_times} , @after;
   } else {
-    push @{$self->_band_times} , [$start,$end,1,$self->_priority++,$self->_time_id++];
+    $self->_priority($self->_priority + 1);
+    $self->_time_id($self->_time_id + 1);
+    $self->_base([$self->start,$self->end,1,$self->_priority,$self->_time_id]);
   }
 }
 
